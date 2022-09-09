@@ -268,7 +268,7 @@ const gameController=(() => {
         }
         if(currentplayer.getcomp())
         {
-            gameboard.computerSmartPlay()
+            gameboard.computerplay()
         }
         
     }
@@ -296,7 +296,7 @@ const gameController=(() => {
 gameboard.draw()
 if(gameController.getCurrentPlayer().getcomp())
 {
-    gameboard.computerSmartPlay()
+    gameboard.computerplay()
 }
 //gameController.game()
 
