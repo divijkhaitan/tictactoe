@@ -1,9 +1,9 @@
 const gameboard=(() => {
     let board=[["","",""],["","",""],["","",""]]
-    
+    let selectedCell;
+    function getBoard(){return board}
     function draw()
     {
-        console.log('drawing');
         const divrow=document.createElement('div');
         divrow.classList.add('divrow')
     
@@ -29,7 +29,6 @@ const gameboard=(() => {
             }
         divrow.appendChild(divcols)
         }
-        console.log(divrow)
         document.querySelector('.container').appendChild(divrow);
     }
 
@@ -40,15 +39,64 @@ const gameboard=(() => {
             console.log('taken')
             return
         }
-        console.log(gameController.getCurrentPlayer())
         e.target.textContent=gameController.getCurrentPlayer().getMarker()
         board[e.target.getAttribute('rowind')-1][e.target.getAttribute('colind')-1]=gameController.getCurrentPlayer().getMarker()
-        console.log(board)
         gameController.toggleTurnCompleted();
         gameController.game()
     }
-
-    function checkrow(row)
+    function computerplay(givenRow,givenCol)
+    {
+        turn=false
+        let row=givenRow||Math.floor(Math.random()*3);
+        let col=givenCol||Math.floor(Math.random()*3);    
+        while(!turn)
+        {
+            if(board[row][col]==="")
+            {
+                board[row][col]=gameController.getCurrentPlayer().getMarker()
+                turn=true
+                //console.log(selectedCell)
+                selectedCell=document.querySelector(`[rowind='${row+1}'][colind='${col+1}']`);
+                selectedCell.textContent=gameController.getCurrentPlayer().getMarker()
+                gameController.toggleTurnCompleted()
+                gameController.game()
+                return
+            }
+            else
+            {
+                row=Math.floor(Math.random()*3);
+                col=Math.floor(Math.random()*3);    
+            }
+        }
+    }
+    function computerSmartPlay()
+    {
+        turn=false
+        let bestscore=-Infinity;
+        let bestMove;    
+        let vboard=board
+        while(!turn)
+        {
+            for (let i=0;i<3;i++)
+            {
+                for(let j=0;j<3;j++)
+                {
+                    if(vboard[i][j]==="")
+                    {
+                        vboard[i][j]=gameController.getCurrentPlayer().getMarker()
+                        let score=gameController.getCurrentPlayer().minimax(vboard,0,false)
+                        if(score>bestscore)
+                        {
+                            bestscore=score
+                            bestMove=[i,j]
+                        }
+                    }
+                }
+            }
+            computerplay(bestMove[0],bestMove[1])
+        }
+    }
+    function checkrow(board,row)
     {
         if((board[row][0]===board[row][1])&&(board[row][1]=== board[row][2]) &&(board[row][0]!== ""))
         {
@@ -60,7 +108,7 @@ const gameboard=(() => {
         else 
         return false
     }
-    function checkcol(col)
+    function checkcol(board,col)
     {
         if((board[0][col]=== board[1][col])&&(board[1][col]=== board[2][col]) &&(board[0][col]!== ""))
         {
@@ -71,8 +119,7 @@ const gameboard=(() => {
         else 
         return false
     }
-
-    function checkdiag()
+    function checkdiag(board)
     {
         if((board[0][0]=== board[1][1])&&(board[1][1]=== board[2][2]) &&(board[0][0]!== ""))
         {
@@ -90,14 +137,9 @@ const gameboard=(() => {
         return false
        
     }
-
-    function gameOver()
-    {}
-    
-    return {draw, checkcol, checkrow, checkdiag, gameOver};
+    return {draw, checkcol, checkrow, checkdiag, computerplay, getBoard, computerSmartPlay};
 }
 ) ();
-
 
 const player=(playerName, playerMarker, isComputer, playerorder) => {
     const name=playerName
@@ -108,11 +150,91 @@ const player=(playerName, playerMarker, isComputer, playerorder) => {
     const getMarker=()=>{return marker;}
     const getcomp=()=>{return isComp;}
     const getOrder=()=>{return order;}
-    return {getName,getMarker,getcomp,getOrder}
+    function minimax(board,depth, isMaximising)
+    {
+        let gamefin=false
+        let score;
+        for(let i=0;i<3;i++)
+        {
+            gamefin=gamefin||gameboard.checkcol(board, i)
+            gamefin=gamefin||gameboard.checkrow(board, i)
+            gamefin=gamefin||gameboard.checkdiag(board)
+        }
+        if(gamefin)
+        {
+            if(depth%2==0)
+            {
+                score=1
+                return score;
+            }
+            else
+            {
+                score=-1
+                return score;
+            }
+        }
+        else
+        {
+            if(gameController.getTurnIndex()+depth>=9)
+            {
+                score=0
+                return score;
+            }
+            else
+            {
+                if(isMaximising)
+                {
+                    let bestscore=-Infinity;
+                    for (let i=0;i<3;i++)
+                    {
+                        for(let j=0;j<3;j++)
+                        {
+                            if(board[i][j]==="")
+                            {
+                                board[i][j]= gameController.getCurrentPlayer().getMarker()
+                                let score=gameController.getCurrentPlayer().minimax(board,depth+1,false)
+                                bestscore=Math.max(score,bestscore)
+                            }
+                        }
+                    }
+                    return bestscore
+                }
+                
+
+                else
+                {
+                    let bestscore=Infinity
+                    for (let i=0;i<3;i++)
+                    {
+                        for(let j=0;j<3;j++)
+                        {
+                            if(board[i][j]==="")
+                            {
+                                if(gameController.getCurrentPlayer().getMarker()==="X")
+                                {
+                                    board[i][j]="O"
+                                }
+                                else
+                                {
+                                    board[i][j]="X"
+                                }
+                                let score=gameController.getCurrentPlayer().minimax(board,depth+1,true)
+                                bestscore=Math.min(score,bestscore)
+                            }
+                        }
+                    }
+                    return bestscore   
+                }
+            }
+        }
+
+    }
+    return {getName,getMarker,getcomp,getOrder, minimax}
+    
 }
 ;
 p1=player('PlayerOne', 'X', false, 1)
-p2=player('PlayerTwo', 'O', false, 2)
+p2=player('PlayerTwo', 'O', true, 2)
 
 const gameController=(() => {
     let turnindex=1
@@ -127,24 +249,28 @@ const gameController=(() => {
         }
         for (let i=0;i<3;i++)
         {
-            gameOver=gameOver||gameboard.checkcol(i)
-            gameOver=gameOver||gameboard.checkrow(i)
-            gameOver=gameOver||gameboard.checkdiag()
+            gameOver=gameOver||gameboard.checkcol(gameboard.getBoard(),i)
+            gameOver=gameOver||gameboard.checkrow(gameboard.getBoard(),i)
+            gameOver=gameOver||gameboard.checkdiag(gameboard.getBoard())
             if(gameOver)
             {
                 console.log(`${currentplayer.getName()} is the winner`)
-                gameboard.gameOver();
                 break;
             }
         }
         turnindex++;
         toggleCurrentPLayer()
         turnCompleted=false;
-        
         if(turnindex==9)
         {
             console.log("It's a tie!")
+            return;
         }
+        if(currentplayer.getcomp())
+        {
+            gameboard.computerSmartPlay()
+        }
+        
     }
     const getTurnIndex=()=>{return turnindex}
     const toggleCurrentPLayer=()=>{
@@ -155,8 +281,7 @@ const gameController=(() => {
             else
             {
                 currentplayer=p2
-            }
-            
+            }    
     }
     const toggleTurnCompleted=()=>{turnCompleted=!turnCompleted}
     const getTurncompleted=()=>{return turnCompleted}
@@ -169,5 +294,9 @@ const gameController=(() => {
 }
 ) ();
 gameboard.draw()
+if(gameController.getCurrentPlayer().getcomp())
+{
+    gameboard.computerSmartPlay()
+}
 //gameController.game()
 
